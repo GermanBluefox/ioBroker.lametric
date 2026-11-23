@@ -32,7 +32,15 @@ describe('help', () => {
             if (command !== 'help') {
                 expect(HELP, command).to.contain(command);
             }
-            expect(write, command).to.equal(!['help', 'getPollingUrl'].includes(command));
+            expect(write, command).to.equal(!['help', 'getPollingUrl', 'getScreens'].includes(command));
+        }
+    });
+
+    it('marks the commands of the shared catalog with standard and names them in the text', () => {
+        const standards = Object.fromEntries(COMMANDS.filter(c => c.standard).map(c => [c.command, c.standard]));
+        expect(standards).to.deep.equal({ getScreens: 'screen.getScreens', show: 'screen.show' });
+        for (const standard of Object.values(standards)) {
+            expect(HELP, standard).to.contain(standard);
         }
     });
 

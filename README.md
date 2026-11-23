@@ -56,6 +56,7 @@ iobroker add lametric
 * (ioBroker-Bot) Adapter requires admin >= 7.8.23 now
 * (@klein0r) Updated LaMetric firmware version recommendation to 2.3.11 (3.2.8)
 * (@GermanBluefox) Added the message "help": a description of all messages for AI agents (e.g. pi-agent), and common.supportedMessages.help
+* (@GermanBluefox) Added the standard commands of the shared catalog: screen.getScreens, screen.show (a text as a notification)
 
 ### 6.0.1 (2026-08-04)
 

@@ -5,6 +5,7 @@ const axios = require('axios').default;
 const https = require('node:https');
 const adapterName = require('./package.json').name.split('.').pop();
 const { COMMANDS, HELP } = require('./lib/help');
+const { SCREEN_KINDS, showNotification, errorOf } = require('./lib/screen');
 
 const MY_DATA_DIY_PACKAGE = 'com.lametric.diy.devwidget';
 
@@ -677,6 +678,12 @@ class LaMetric extends utils.Adapter {
             return;
         }
 
+        if (obj.command === 'getScreens' || obj.command === 'show') {
+            // getScreens and show of the shared catalog (family screen)
+            void this.onScreenMessage(obj);
+            return;
+        }
+
         if (obj && obj.message) {
             // Notification
             if (obj.command === 'notification' && typeof obj.message === 'object') {
@@ -856,6 +863,51 @@ class LaMetric extends utils.Adapter {
             }
         } else if (obj.callback) {
             this.sendTo(obj.from, obj.command, { error: 'Invalid message' }, obj.callback);
+        }
+    }
+
+    /**
+     * getScreens and show of the shared catalog: one instance is one clock, show {kind: 'text'} is a notification.
+     *
+     * @param {ioBroker.Message} obj the message
+     */
+    async onScreenMessage(obj) {
+        const reply = answer => {
+            if (obj.callback) {
+                this.sendTo(obj.from, obj.command, answer, obj.callback);
+            }
+        };
+        const message =
+            obj.message && typeof obj.message === 'object' && !Array.isArray(obj.message) ? obj.message : {};
+        const name = await this.getStateAsync('meta.name').catch(() => null);
+        const connection = await this.getStateAsync('info.connection').catch(() => null);
+        const screen = {
+            id: this.namespace,
+            name: typeof name?.val === 'string' && name.val ? name.val : this.namespace,
+            online: !!connection?.val,
+            kinds: [...SCREEN_KINDS],
+        };
+        if (obj.command === 'getScreens') {
+            reply({ screens: [screen] });
+            return;
+        }
+        const { data, error } = showNotification(message, screen);
+        if (error) {
+            reply(error);
+            return;
+        }
+        try {
+            const response = await this.buildRequestAsync('device/notifications', 'POST', data);
+            const id = response?.data?.success?.id;
+            reply(
+                id !== undefined && id !== null
+                    ? { ok: true, id: String(id), screens: [screen.name] }
+                    : { error: 'the clock did not accept the notification' },
+            );
+        } catch (e) {
+            const failure = errorOf(e);
+            this.log.warn(`(device/notifications) Unable to show: ${failure.error}`);
+            reply(failure);
         }
     }
 
